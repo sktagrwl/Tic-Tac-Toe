@@ -7,6 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Goal
 Production-ready server-authoritative multiplayer Tic-Tac-Toe. All game logic lives on the server (Nakama Go plugin). The client only sends moves and renders state received from the server.
 
+**Current status**: Phase 1 in progress. Auth (email/password) and the core match handler are implemented. The lobby, game page, stats, and most client services/hooks are not yet built.
+
 ---
 
 ## Commands
@@ -52,41 +54,43 @@ CockroachDB (schema managed by Nakama — no direct SQL from app code)
 
 ## File Map
 
+Files marked *(planned)* do not exist yet — they are the next things to build.
+
 ### Server (Go) — `server/`
 | File | Purpose |
 |------|---------|
 | `main.go` | `InitModule` — registers match handler + all RPCs |
 | `match/opcodes.go` | All op-code and error-code integer constants |
-| `match/state.go` | `MatchState` struct, `checkWinner()`, `isBoardFull()` |
+| `match/state.go` | `MatchState` struct (`Board [9]string`), `CheckWinner()`, `IsBoardFull()`, helpers |
 | `match/handler.go` | The 7 Nakama match interface methods (MatchInit → MatchTerminate) |
 | `rpc/matchmake.go` | `RpcFindMatch` — creates or returns a match ID |
-| `rpc/stats.go` | `RpcGetPlayerStats` — reads from Nakama Storage |
-| `storage/player_stats.go` | `ReadStats`, `WriteStats`, `IncrementAfterGame` |
+| `rpc/stats.go` | *(planned)* `RpcGetPlayerStats` — reads from Nakama Storage |
+| `storage/player_stats.go` | *(planned)* `ReadStats`, `WriteStats`, `IncrementAfterGame` |
 
 ### Client (TypeScript) — `client/src/`
 | Path | Purpose |
 |------|---------|
 | `types/game.ts` | `CellValue`, `Board`, `MatchPhase`, `MatchState`, `PlayerStats` |
 | `types/nakama.ts` | `OpCode` consts + message payload types (mirrors Go op-codes) |
-| `services/nakamaClient.ts` | Singleton `Client` + `createSocket()` factory |
-| `services/authService.ts` | `authenticateDevice()`, `getAccount()` |
-| `services/matchService.ts` | `createMatch`, `joinMatch`, `leaveMatch`, `sendMove`, `findMatch` |
-| `services/statsService.ts` | `getStats()` |
-| `stores/authStore.ts` | Session, userId, username — persisted to localStorage |
-| `stores/gameStore.ts` | Board, phase, players, winner — NOT persisted (server owns state) |
-| `stores/statsStore.ts` | Wins/losses/draws/streak — NOT persisted (always fetch fresh) |
-| `hooks/useNakamaSocket.ts` | Connect socket, wire `onmatchdata` → `gameStore` |
-| `hooks/useMatchmaking.ts` | Create/join/auto-matchmake + loading state |
-| `hooks/useGameActions.ts` | `sendMove`, `leaveMatch` convenience wrappers |
-| `components/ui/` | Button, Modal, Spinner, StatusBadge |
-| `components/game/` | Board, Cell, PlayerBar, GameStatus, WinnerOverlay |
-| `components/lobby/` | LobbyActions, JoinRoomModal |
-| `pages/SplashPage.tsx` | Auto device-auth gate → redirects to /lobby |
-| `pages/LobbyPage.tsx` | Quick Match / Create Room / Join by ID |
-| `pages/GamePage.tsx` | Live game, reads gameStore |
-| `pages/StatsPage.tsx` | Personal stats display |
-| `utils/boardUtils.ts` | Client-side `checkWinner` (display only, not authoritative) |
-| `utils/constants.ts` | `BOARD_SIZE`, Nakama collection names |
+| `services/nakamaClient.ts` | Singleton `nakamaClient` (REST `Client`); socket creation is *(planned)* |
+| `services/authService.ts` | `registerEmail()`, `loginEmail()`, `authenticateGoogle()` |
+| `services/matchService.ts` | *(planned)* `createMatch`, `joinMatch`, `leaveMatch`, `sendMove`, `findMatch` |
+| `services/statsService.ts` | *(planned)* `getStats()` |
+| `stores/authStore.ts` | Session, userId, username, email, isAuthenticated — persisted to localStorage (key: `ttt_auth`) |
+| `stores/gameStore.ts` | *(planned)* Board, phase, players, winner — NOT persisted (server owns state) |
+| `stores/statsStore.ts` | *(planned)* Wins/losses/draws/streak — NOT persisted (always fetch fresh) |
+| `hooks/useNakamaSocket.ts` | *(planned)* Connect socket, wire `onmatchdata` → `gameStore` |
+| `hooks/useMatchmaking.ts` | *(planned)* Create/join/auto-matchmake + loading state |
+| `hooks/useGameActions.ts` | *(planned)* `sendMove`, `leaveMatch` convenience wrappers |
+| `components/ui/` | *(planned)* Button, Modal, Spinner, StatusBadge |
+| `components/game/` | *(planned)* Board, Cell, PlayerBar, GameStatus, WinnerOverlay |
+| `components/lobby/` | *(planned)* LobbyActions, JoinRoomModal |
+| `pages/SplashPage.tsx` | Email/password login + register form; redirects to /lobby on success |
+| `pages/LobbyPage.tsx` | *(planned)* Quick Match / Create Room / Join by ID |
+| `pages/GamePage.tsx` | *(planned)* Live game, reads gameStore |
+| `pages/StatsPage.tsx` | *(planned)* Personal stats display |
+| `utils/boardUtils.ts` | *(planned)* Client-side `checkWinner` (display only, not authoritative) |
+| `utils/constants.ts` | *(planned)* `BOARD_SIZE`, Nakama collection names |
 
 ---
 
@@ -144,7 +148,7 @@ WAITING (0–1 players)
 
 ## Router Structure
 ```
-/               → SplashPage      (device auth, auto-redirects to /lobby)
+/               → SplashPage      (email/password login + register form, redirects to /lobby on success)
 /lobby          → LobbyPage       (RequireAuth guard)
 /game/:matchId  → GamePage        (RequireAuth guard)
 /stats          → StatsPage       (RequireAuth guard)
@@ -154,18 +158,19 @@ WAITING (0–1 players)
 ---
 
 ## Zustand Stores
-- **authStore** — persisted to localStorage (token string only, not full Session object)
-- **gameStore** — NOT persisted; server is the source of truth; reconnect re-syncs from server
-- **statsStore** — NOT persisted; always fetch fresh after each game
+- **authStore** — persisted to localStorage (key: `ttt_auth`); persists `session` (token + refresh_token only via `partialize`), `userId`, `username`, `email`, `isAuthenticated`
+- **gameStore** — *(planned)* NOT persisted; server is the source of truth; reconnect re-syncs from server
+- **statsStore** — *(planned)* NOT persisted; always fetch fresh after each game
 
 ---
 
 ## Critical Nakama SDK Rules
-1. `Client` (REST) ≠ `Socket` (WebSocket). Connect the socket after auth before joining any match.
+1. `Client` (REST) ≠ `Socket` (WebSocket). `nakamaClient` in `nakamaClient.ts` is the REST client. Socket must be created separately after auth before joining any match.
 2. `socket.onmatchdata` is the **only** inbound real-time channel. Route by `data.op_code`.
 3. Decode match data: `JSON.parse(new TextDecoder().decode(data.data))`
 4. Always get a match ID from the `find_match` RPC — never call `socket.createMatch()` directly from the UI.
 5. Go plugin must compile as a Linux shared library. Use Docker when building on Mac.
+6. Auth uses email/password via `nakamaClient.authenticateEmail()`. Google OAuth is also supported. There is no device auth.
 
 ---
 

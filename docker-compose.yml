@@ -23,6 +23,7 @@ services:
     volumes:
       - nakama-data:/nakama/data
       - ./server:/nakama/data/modules
+      - ./nakama-config.yml:/nakama/data/nakama-config.yml
     entrypoint:
       - /bin/sh
       - -ecx

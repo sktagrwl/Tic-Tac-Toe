@@ -1,0 +1,5 @@
+.env
+.env.local
+client/.env
+client/.env.local
+nakama-config.yml
