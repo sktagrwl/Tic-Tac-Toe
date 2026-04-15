@@ -2,4 +2,5 @@
 .env.local
 client/.env
 client/.env.local
-nakama-config.yml
+nakama-config.ymlnode_modules/
+client/node_modules/
