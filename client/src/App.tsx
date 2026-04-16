@@ -4,11 +4,7 @@ import SplashPage from './pages/SplashPage';
 import LobbyPage from './pages/LobbyPage';
 import ProfilePage from './pages/ProfilePage';
 import GamePage from './pages/GamePage';
-
-// Placeholder pages — we'll build these next
-function StatsPage() {
-  return <div className="p-8 text-2xl font-bold">Stats — coming soon</div>;
-}
+import StatsPage from './pages/StatsPage';
 
 // Guard: redirects to / if not authenticated
 function RequireAuth() {

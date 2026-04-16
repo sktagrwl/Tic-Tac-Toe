@@ -10,6 +10,7 @@ import (
     "encoding/json"
 
     "github.com/heroiclabs/nakama-common/runtime"
+    "tictactoe-server/storage"
 )
 
 // TicTacToeMatch implements the Nakama runtime.Match interface
@@ -148,6 +149,11 @@ func (m *TicTacToeMatch) MatchLeave(
             stateData, _ := json.Marshal(s)
             dispatcher.BroadcastMessage(OpStateUpdate, stateData, nil, nil, true)
             dispatcher.BroadcastMessage(OpGameOver, stateData, nil, nil, true)
+            if len(s.Players) == 2 {
+                if err := storage.UpdateMatchStats(ctx, nk, s.Players[0].UserID, s.Players[1].UserID, s.Winner); err != nil {
+                    logger.Error("failed to update stats after forfeit: %v", err)
+                }
+            }
         }
     }
 
@@ -218,6 +224,9 @@ func (m *TicTacToeMatch) MatchLoop(
             stateData, _ := json.Marshal(s)
             dispatcher.BroadcastMessage(OpStateUpdate, stateData, nil, nil, true)
             dispatcher.BroadcastMessage(OpGameOver, stateData, nil, nil, true)
+            if err := storage.UpdateMatchStats(ctx, nk, s.Players[0].UserID, s.Players[1].UserID, s.Winner); err != nil {
+                logger.Error("Failed to update match stats after win: %v", err)
+            }
             continue
         }
 
@@ -229,6 +238,9 @@ func (m *TicTacToeMatch) MatchLoop(
             stateData, _ := json.Marshal(s)
             dispatcher.BroadcastMessage(OpStateUpdate, stateData, nil, nil, true)
             dispatcher.BroadcastMessage(OpGameOver, stateData, nil, nil, true)
+            if err := storage.UpdateMatchStats(ctx, nk, s.Players[0].UserID, s.Players[1].UserID, s.Winner); err != nil {
+                logger.Error("Failed to update match stats after draw: %v", err)
+            }
             continue
         }
 

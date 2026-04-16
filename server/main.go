@@ -34,6 +34,9 @@ func InitModule(
         logger.Error("Failed to register find_match RPC: %v", err)
         return err
     }
+    if err := initializer.RegisterRpc("get_stats", rpc.RpcGetStatus); err != nil {
+        return err
+    }
 
     logger.Info("TicTacToe plugin loaded successfully")
     return nil

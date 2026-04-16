@@ -64,6 +64,12 @@ return (
           <span className="font-semibold text-gray-900">{username}</span>
         </div>
         <button
+          onClick={() => navigate('/stats')}
+          className="text-sm text-gray-500 hover:text-gray-700"
+        >
+          Stats
+        </button>
+        <button
           onClick={() => navigate('/profile')}
           className="text-sm text-gray-500 hover:text-gray-700"
         >
