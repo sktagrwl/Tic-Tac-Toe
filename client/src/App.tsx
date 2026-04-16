@@ -1,15 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from './stores/authStore';
 import SplashPage from './pages/SplashPage';
+import LobbyPage from './pages/LobbyPage';
 import ProfilePage from './pages/ProfilePage';
+import GamePage from './pages/GamePage';
 
 // Placeholder pages — we'll build these next
-function LobbyPage() {
-  return <div className="p-8 text-2xl font-bold">Lobby — coming soon</div>;
-}
-function GamePage() {
-  return <div className="p-8 text-2xl font-bold">Game — coming soon</div>;
-}
 function StatsPage() {
   return <div className="p-8 text-2xl font-bold">Stats — coming soon</div>;
 }

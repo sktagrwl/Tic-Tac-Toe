@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Session } from '@heroiclabs/nakama-js';
+import { Session } from '@heroiclabs/nakama-js';
 import { loginEmail, registerEmail, authenticateGoogle } from '../services/authService';
 
 interface AuthState {
@@ -108,14 +108,24 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'ttt_auth',
-      // Only persist the token string, not the full session object
       partialize: (state) => ({
-        session: state.session ? { token: state.session.token, refresh_token: state.session.refresh_token } : null,
+        sessionToken: state.session?.token ?? null,
+        refreshToken: state.session?.refresh_token ?? null,
         userId: state.userId,
         username: state.username,
         email: state.email,
         isAuthenticated: state.isAuthenticated,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        const { sessionToken, refreshToken } = state as unknown as {
+          sessionToken: string | null;
+          refreshToken: string | null;
+        };
+        if (sessionToken && refreshToken) {
+          state.session = Session.restore(sessionToken, refreshToken);
+        }
+      },
     }
   )
 );

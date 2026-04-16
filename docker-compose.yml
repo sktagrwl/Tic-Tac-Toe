@@ -10,10 +10,34 @@ services:
       - cockroach-data:/var/lib/cockroach
     restart: unless-stopped
 
+  plugin-builder:
+    image: heroiclabs/nakama-pluginbuilder:3.25.0
+    platform: linux/amd64
+    environment:
+      - GOTOOLCHAIN=local
+    entrypoint: []
+    command:
+      - go
+      - build
+      - --trimpath
+      - --mod=vendor
+      - -buildmode=plugin
+      - -o
+      - ./backend.so
+      - .
+    working_dir: /backend
+    volumes:
+      - ./server:/backend
+
+
   nakama:
     image: heroiclabs/nakama:3.25.0
+    platform: linux/amd64
     depends_on:
-      - cockroachdb
+      cockroachdb:
+        condition: service_started
+      plugin-builder:
+        condition: service_completed_successfully
     ports:
       - "7349:7349" # gRPC
       - "7350:7350" # HTTP
@@ -32,6 +56,7 @@ services:
         --database.address root@cockroachdb:26257
         &&
         exec /nakama/nakama
+        --config /nakama/data/nakama-config.yml
         --name nakama
         --database.address root@cockroachdb:26257
         --logger.level DEBUG
