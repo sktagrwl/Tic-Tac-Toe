@@ -1,5 +1,6 @@
 {
-  "buildCommand": "cd client && npx vite build",
+  "buildCommand": "pnpm --filter client run build",
   "outputDirectory": "client/dist",
   "installCommand": "pnpm install"
 }
+
