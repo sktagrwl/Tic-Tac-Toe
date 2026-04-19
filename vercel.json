@@ -1,5 +1,5 @@
 {
   "buildCommand": "cd client && pnpm run build",
   "outputDirectory": "client/dist",
-  "installCommand": "cd client && pnpm install --ignore-workspace"
+  "installCommand": "cd client && pnpm install --ignore-workspace --no-frozen-lockfile"
 }
