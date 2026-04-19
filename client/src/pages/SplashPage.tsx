@@ -36,26 +36,30 @@ export default function SplashPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-md p-8">
+    <div className="min-h-screen flex items-center justify-center bg-oxo-bg bg-dot-grid animate-fade-in">
+      <div className="w-full max-w-sm bg-oxo-surface border border-oxo-border rounded-2xl p-8 shadow-2xl">
 
-        {/* Header */}
+        {/* OXO Wordmark */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900">Tic Tac Toe</h1>
-          <p className="text-gray-500 mt-2">
-            {mode === 'login' ? 'Welcome back' : 'Create your account'}
+          <div className="text-5xl font-bold tracking-tight mb-2 leading-none">
+            <span className="text-oxo-o">O</span>
+            <span className="text-oxo-x">X</span>
+            <span className="text-oxo-o">O</span>
+          </div>
+          <p className="text-oxo-faint text-sm">
+            {mode === 'login' ? 'Welcome back, player.' : 'Create your account.'}
           </p>
         </div>
 
         {/* Error */}
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+          <div className="mb-4 p-3 bg-red-950/60 border border-red-800 text-red-400 rounded-lg text-sm animate-fade-up">
             {error}
           </div>
         )}
 
         {/* Google Sign-In */}
-        <div className="mb-6">
+        <div className="mb-6 flex justify-center">
           <GoogleLogin
             onSuccess={async (credentialResponse) => {
               if (!credentialResponse.credential) return;
@@ -67,24 +71,25 @@ export default function SplashPage() {
             onError={() => {
               useAuthStore.setState({ error: 'Google login failed' });
             }}
-            width="368"
+            width="320"
             text="continue_with"
             shape="rectangular"
+            theme="filled_black"
           />
         </div>
 
         {/* Divider */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="flex-1 h-px bg-gray-200" />
-          <span className="text-xs text-gray-400">or</span>
-          <div className="flex-1 h-px bg-gray-200" />
+          <div className="flex-1 h-px bg-oxo-border" />
+          <span className="text-xs text-oxo-faint">or</span>
+          <div className="flex-1 h-px bg-oxo-border" />
         </div>
 
         {/* Email/Password Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === 'register' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-oxo-muted mb-1.5">
                 Username
               </label>
               <input
@@ -95,13 +100,13 @@ export default function SplashPage() {
                 minLength={3}
                 maxLength={20}
                 placeholder="Choose a username"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="input-oxo"
               />
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-oxo-muted mb-1.5">
               Email
             </label>
             <input
@@ -110,12 +115,12 @@ export default function SplashPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="you@example.com"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input-oxo"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-oxo-muted mb-1.5">
               Password
             </label>
             <input
@@ -125,29 +130,41 @@ export default function SplashPage() {
               required
               minLength={8}
               placeholder="Min 8 characters"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="input-oxo"
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold rounded-lg transition-colors"
-          >
-            {isLoading ? 'Please wait...' : mode === 'login' ? 'Login' : 'Create Account'}
-          </button>
+          <div className="pt-1">
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="btn-primary"
+            >
+              {isLoading ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Account'}
+            </button>
+          </div>
         </form>
 
         {/* Switch mode */}
-        <p className="text-center text-sm text-gray-500 mt-6">
+        <p className="text-center text-sm text-oxo-faint mt-6">
           {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}{' '}
           <button
             onClick={switchMode}
-            className="text-blue-600 hover:underline font-medium"
+            className="text-oxo-accent-2 hover:text-oxo-accent font-medium transition-colors"
           >
-            {mode === 'login' ? 'Register' : 'Login'}
+            {mode === 'login' ? 'Register' : 'Sign In'}
           </button>
         </p>
+
+        {/* Back to lobby */}
+        <div className="text-center mt-4">
+          <button
+            onClick={() => navigate('/')}
+            className="text-xs text-oxo-faint hover:text-oxo-muted transition-colors"
+          >
+            ← Back to lobby
+          </button>
+        </div>
 
       </div>
     </div>

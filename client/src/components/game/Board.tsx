@@ -13,7 +13,7 @@ export default function Board({ board, winLine, isMyTurn, phase, onMove }: Board
   const winningCells = winLine ? new Set(winLine) : new Set<number>();
 
   return (
-    <div className="grid grid-cols-3 gap-3 w-full max-w-xs mx-auto">
+    <div className="grid grid-cols-3 gap-2 w-full max-w-oxo-board mx-auto">
       {board.map((value, index) => (
         <Cell
           key={index}

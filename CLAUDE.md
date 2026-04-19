@@ -71,13 +71,17 @@ These two files must stay in sync — any change to one requires a change to the
 ### Session persistence
 `authStore` persists only `sessionToken` + `refreshToken` to localStorage (key: `ttt_auth`). On rehydration, `onRehydrateStorage` calls `Session.restore(token, refreshToken)` to reconstruct a real Nakama `Session` object — plain objects don't have the SDK methods the client needs.
 
-### Match flow
-1. LobbyPage calls `findMatch(session)` → RPC `find_match` → always creates a new match and returns its ID
-2. Creator shares the match ID; joiner pastes it in "Join a Room"
-3. Both navigate to `/game/:matchId`
-4. GamePage calls `joinMatch(matchId)` → `socket.joinMatch()` via `waitForSocket()`
-5. All game state flows from server via `socket.onmatchdata` → `useNakamaSocket` → `applyStateUpdate` → `gameStore`
-6. Moves: `sendMove` → `socket.sendMatchState(matchId, OpCode.MOVE, payload)`
+### Match flow (Room Codes)
+1. LobbyPage → `find_match` RPC → server creates match + 5-char alphanumeric code → returns `{code}`
+2. Creator sees code and can share it; room appears in Browse Rooms until second player joins
+3. Joiner enters code in "Join by Code" or clicks a room in Browse Rooms → `join_by_code` RPC resolves code → matchId
+4. Both navigate to `/game/:code` (URL carries the short code, not the raw matchId)
+5. GamePage calls `joinMatch(code)` → `join_by_code` RPC to get matchId → `socket.joinMatch(matchId)` via `waitForSocket()`
+6. `MatchJoin` (first player): sets match label to `"open"` + writes room host record for discovery
+7. `MatchJoin` (second player): clears label to `""` (removes from Browse Rooms) + deletes host record
+8. All game state flows from server via `socket.onmatchdata` → `useNakamaSocket` → `applyStateUpdate` → `gameStore`
+9. Moves: `sendMove` → `socket.sendMatchState(matchId, OpCode.MOVE, payload)`
+10. On game over: server calls `UpdateMatchStats()` — updates `player_stats` and writes a `game_history` entry for both players
 
 ---
 
@@ -86,29 +90,38 @@ These two files must stay in sync — any change to one requires a change to the
 ### Server (Go) — `server/`
 | File | Purpose |
 |------|---------|
-| `main.go` | `InitModule` — registers match handler + `find_match` RPC |
+| `main.go` | `InitModule` — registers match handler + all RPC functions |
 | `match/opcodes.go` | Op-code and error-code integer constants |
 | `match/state.go` | `MatchState` struct, `CheckWinner()`, `IsBoardFull()`, `SymbolForUser()`, `OtherPlayerID()` |
 | `match/handler.go` | The 7 Nakama match lifecycle methods (MatchInit → MatchTerminate) |
-| `rpc/matchmake.go` | `RpcFindMatch` — creates a new match and returns `{"matchId": "..."}` |
+| `rpc/matchmake.go` | `RpcFindMatch`, `RpcQuickMatch`, `RpcJoinByCode`, `RpcListRooms` |
+| `rpc/get_game_history.go` | `RpcGetGameHistory` — paginated game history for the current user |
+| `storage/player_stats.go` | `PlayerStats` read/write; `UpdateMatchStats()` called after every game |
+| `storage/game_history.go` | `GameHistoryEntry` write + read helpers; reverse-timestamp keying |
+| `storage/room_codes.go` | 5-char code generation; bidirectional code↔matchId storage with retry |
+| `storage/room_host.go` | Host record write/delete used by Browse Rooms discovery |
 
 ### Client (TypeScript) — `client/src/`
 | Path | Purpose |
 |------|---------|
-| `types/game.ts` | `CellValue`, `Board`, `MatchPhase`, `MatchState`, `PlayerStats` |
+| `types/game.ts` | `CellValue`, `Board`, `MatchPhase`, `MatchState`, `PlayerStats`, `GameHistoryEntry` |
 | `types/nakama.ts` | `OpCode` consts + payload types (must mirror Go op-codes) |
 | `services/nakamaClient.ts` | Singleton `nakamaClient` REST client; socket created via `nakamaClient.createSocket()` |
 | `services/authService.ts` | `registerEmail()`, `loginEmail()`, `authenticateGoogle()` |
-| `services/matchService.ts` | `findMatch`, `joinMatch`, `leaveMatch`, `sendMove` |
+| `services/matchService.ts` | `findMatch`, `joinMatch`, `leaveMatch`, `sendMove`, `joinByCode` |
+| `services/statsService.ts` | `getStats()`, `getGameHistory({cursor, limit})` RPC wrappers |
 | `stores/authStore.ts` | Session, userId, username, email, isAuthenticated — persisted to localStorage |
 | `stores/gameStore.ts` | Board, phase, players, winner, winLine — NOT persisted; server is source of truth |
+| `stores/statsStore.ts` | Aggregate stats + game history entries + pagination cursor |
 | `hooks/useNakamaSocket.ts` | App-level socket singleton; routes `onmatchdata` → `gameStore` |
+| `components/Navbar.tsx` | Top bar: logo/back button on left, user avatar dropdown (Stats, Profile, Sign Out) on right |
 | `components/game/Board.tsx` | 3×3 grid; highlights winning cells from `winLine` |
 | `components/game/Cell.tsx` | Individual cell button |
 | `components/game/GameStatus.tsx` | Turn/winner/draw status message |
 | `pages/SplashPage.tsx` | Email/password login + register form → redirects to /lobby |
-| `pages/LobbyPage.tsx` | Create room (shows shareable match ID) or join by match ID |
-| `pages/GamePage.tsx` | Live game; joins match on mount, leaves on unmount |
+| `pages/LobbyPage.tsx` | Create Room (5-char code), Join by Code, Browse Rooms (open rooms with host stats hover), Quick Match |
+| `pages/GamePage.tsx` | Live game; resolves code → matchId on mount, leaves on unmount |
+| `pages/StatsPage.tsx` | Left: aggregate stats + win rate bar; Right: paginated game history |
 | `pages/ProfilePage.tsx` | Update username via `nakamaClient.updateAccount()`, sign out |
 
 ---
@@ -119,8 +132,20 @@ These two files must stay in sync — any change to one requires a change to the
 ```
 1 = MOVE (client→server)    2 = STATE_UPDATE (server→client)
 3 = GAME_OVER               4 = PLAYER_JOIN    5 = PLAYER_LEAVE
-99 = ERROR
+6 = REMATCH                 7 = REMATCH_REQUEST
+8 = REMATCH_DECLINE         99 = ERROR
 ```
+
+Rematch flow: client sends `REMATCH_REQUEST` (7) → server relays to opponent. Opponent sends `REMATCH` (6) to accept (server creates new match, broadcasts code to both) or `REMATCH_DECLINE` (8) to decline. If both send `REMATCH_REQUEST` simultaneously it is treated as mutual accept.
+
+### Nakama Storage Collections
+| Collection | Key | Owner | Purpose |
+|------------|-----|-------|---------|
+| `player_stats` | `stats` | user | Wins, losses, draws, streaks, totalGames |
+| `game_history` | reverse-timestamp | user | Per-game result entries (newest first) |
+| `room_codes` | 5-char code | system | code → matchId lookup |
+| `room_match_codes` | matchId | system | matchId → code reverse lookup (for rematch) |
+| `room_hosts` | matchId | system | hostId + hostName; deleted when game starts or host leaves |
 
 ### Match State Machine
 ```
@@ -141,13 +166,24 @@ WAITING (0–1 players)
 
 ## Router Structure
 ```
-/               → SplashPage     (public; email/password login + register)
+/               → LobbyPage      (public; shows lobby UI or prompts sign-in)
+/login          → SplashPage     (public; email/password login + register)
 /lobby          → LobbyPage      (RequireAuth guard)
-/game/:matchId  → GamePage       (RequireAuth guard)
-/stats          → StatsPage      (placeholder, RequireAuth guard)
-/profile        → ProfilePage    (RequireAuth guard)
+/game/:code     → GamePage       (RequireAuth; :code is the 5-char room code)
+/stats          → StatsPage      (RequireAuth)
+/profile        → ProfilePage    (RequireAuth)
 *               → redirect to /
 ```
+
+## RPC Endpoints
+| RPC | Payload | Returns | Purpose |
+|-----|---------|---------|---------|
+| `find_match` | — | `{code}` | Create private room with 5-char code |
+| `quick_match` | — | `{matchId}` | Find or create a public quick-match room |
+| `join_by_code` | `{code}` | `{matchId}` | Resolve a room code to a match ID |
+| `list_rooms` | — | `[{code, hostName, hostId, stats}]` | All open private rooms for Browse Rooms |
+| `get_stats` | — | `PlayerStats` | Aggregate stats for the current user |
+| `get_game_history` | `{cursor, limit}` | `{entries, cursor, hasMore}` | Paginated game history (default limit 10, max 50) |
 
 ---
 
@@ -176,8 +212,8 @@ Production env vars (set in Vercel dashboard, not in repo):
 ## Phased Roadmap
 | Phase | Goal | Status |
 |-------|------|--------|
-| 1 | Two players auth → join match → play → see winner | In progress |
-| 2 | Matchmaking (Quick Match) + persistent player stats | Planned |
+| 1 | Two players auth → join match → play → see winner | Complete |
+| 2 | Room codes, Quick Match, persistent stats + game history, Browse Rooms, rematch flow | Complete |
 | 3 | Disconnect handling + forfeit + client reconnect | Planned |
 | 4 | Timer mode (30s/turn, auto-forfeit, countdown UI) | Planned |
 | 5 | Cloud deployment (Fly.io + Vercel) | Planned |

@@ -6,10 +6,10 @@ import ProfilePage from './pages/ProfilePage';
 import GamePage from './pages/GamePage';
 import StatsPage from './pages/StatsPage';
 
-// Guard: redirects to / if not authenticated
+// Guard: redirects to /login if not authenticated
 function RequireAuth() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  if (!isAuthenticated) return <Navigate to="/" replace />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <Outlet />;
 }
 
@@ -17,13 +17,18 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<SplashPage />} />
+        {/* Public */}
+        <Route path="/" element={<LobbyPage />} />
+        <Route path="/login" element={<SplashPage />} />
+
+        {/* Protected */}
         <Route element={<RequireAuth />}>
           <Route path="/lobby" element={<LobbyPage />} />
-          <Route path="/game/:matchId" element={<GamePage />} />
+          <Route path="/game/:code" element={<GamePage />} />
           <Route path="/stats" element={<StatsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
         </Route>
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

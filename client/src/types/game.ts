@@ -36,3 +36,21 @@ export interface PlayerStats {
   bestWinStreak: number;
   totalGames: number;
 }
+
+export type GameResult = 'win' | 'loss' | 'draw';
+
+export interface GameHistoryEntry {
+  matchId: string;
+  shortCode: string;       // "" for quick match rooms
+  opponentId: string;
+  opponentName: string;
+  result: GameResult;
+  mySymbol: 'X' | 'O';
+  playedAt: number;        // Unix seconds
+}
+
+export interface GameHistoryPage {
+  entries: GameHistoryEntry[];
+  cursor: string;
+  hasMore: boolean;
+}

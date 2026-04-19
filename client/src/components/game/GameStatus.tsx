@@ -17,7 +17,7 @@ export default function GameStatus({
 }: GameStatusProps) {
   if (phase === 'waiting') {
     return (
-      <p className="text-center text-gray-500 text-sm mt-4">
+      <p className="text-center text-oxo-faint text-sm animate-fade-in">
         Waiting for opponent to join...
       </p>
     );
@@ -26,20 +26,20 @@ export default function GameStatus({
   if (phase === 'finished') {
     if (winner === 'draw') {
       return (
-        <p className="text-center text-gray-700 font-semibold mt-4">
+        <p className="text-center text-oxo-muted font-semibold text-lg animate-fade-up">
           It's a draw!
         </p>
       );
     }
     if (winner === myUserId) {
       return (
-        <p className="text-center text-green-600 font-bold text-lg mt-4">
+        <p className="text-center text-[#22c55e] font-bold text-xl animate-fade-up">
           You win!
         </p>
       );
     }
     return (
-      <p className="text-center text-red-500 font-bold text-lg mt-4">
+      <p className="text-center text-oxo-o font-bold text-xl animate-fade-up">
         You lose!
       </p>
     );
@@ -48,14 +48,14 @@ export default function GameStatus({
   // phase === 'playing'
   if (isMyTurn) {
     return (
-      <p className="text-center text-blue-600 font-semibold mt-4">
+      <p className="text-center text-oxo-x font-semibold animate-fade-in">
         Your turn — place {mySymbol}
       </p>
     );
   }
 
   return (
-    <p className="text-center text-gray-500 mt-4">
+    <p className="text-center text-oxo-faint">
       Waiting for opponent's move...
     </p>
   );

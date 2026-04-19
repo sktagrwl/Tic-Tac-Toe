@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { nakamaClient } from '../services/nakamaClient';
+import Navbar from '../components/Navbar';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -22,8 +23,6 @@ export default function ProfilePage() {
         username: newUsername,
         display_name: newUsername,
       });
-
-      // Update the store with new username
       useAuthStore.setState({ username: newUsername });
       setMessage({ type: 'success', text: 'Username updated successfully' });
     } catch (err) {
@@ -42,77 +41,65 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-lg mx-auto">
+    <div className="min-h-screen bg-oxo-bg animate-fade-in">
+      <Navbar showBack backPath="/lobby" backLabel="Lobby" />
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <button
-            onClick={() => navigate('/lobby')}
-            className="text-gray-500 hover:text-gray-700 text-sm"
-          >
-            ← Back to Lobby
-          </button>
-          <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
-          <div className="w-20" />
+      <div className="max-w-md mx-auto px-6 py-10 space-y-6">
+
+        {/* Avatar + info */}
+        <div className="flex flex-col items-center gap-3 pb-8 border-b border-oxo-border">
+          <div className="w-20 h-20 rounded-full bg-oxo-accent flex items-center justify-center text-white text-3xl font-bold">
+            {username.charAt(0).toUpperCase()}
+          </div>
+          <div className="text-center">
+            <p className="font-semibold text-oxo-text text-xl">{username}</p>
+            <p className="text-oxo-muted text-sm mt-0.5">{email}</p>
+            <p className="text-oxo-faint text-xs mt-1 font-mono">ID: {userId.slice(0, 8)}...</p>
+          </div>
         </div>
 
-        {/* Avatar + basic info */}
-        <div className="bg-white rounded-2xl shadow-sm p-6 mb-4">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center text-white text-2xl font-bold">
-              {username.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <p className="font-semibold text-gray-900 text-lg">{username}</p>
-              <p className="text-gray-500 text-sm">{email}</p>
-              <p className="text-gray-400 text-xs mt-1">ID: {userId.slice(0, 8)}...</p>
-            </div>
+        {/* Update username form */}
+        <form onSubmit={handleUpdateUsername} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-oxo-muted mb-1.5">
+              Username
+            </label>
+            <input
+              type="text"
+              value={newUsername}
+              onChange={(e) => setNewUsername(e.target.value)}
+              minLength={3}
+              maxLength={20}
+              required
+              className="input-oxo"
+            />
           </div>
 
-          {/* Update username form */}
-          <form onSubmit={handleUpdateUsername} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Username
-              </label>
-              <input
-                type="text"
-                value={newUsername}
-                onChange={(e) => setNewUsername(e.target.value)}
-                minLength={3}
-                maxLength={20}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+          {message && (
+            <div className={`p-3 rounded-lg text-sm border animate-fade-up ${
+              message.type === 'success'
+                ? 'bg-[#22c55e]/10 border-[#22c55e]/30 text-[#22c55e]'
+                : 'bg-red-950/60 border-red-800 text-red-400'
+            }`}>
+              {message.text}
             </div>
+          )}
 
-            {message && (
-              <div className={`p-3 rounded-lg text-sm ${
-                message.type === 'success'
-                  ? 'bg-green-50 border border-green-200 text-green-700'
-                  : 'bg-red-50 border border-red-200 text-red-700'
-              }`}>
-                {message.text}
-              </div>
-            )}
+          <button
+            type="submit"
+            disabled={isLoading || newUsername === username}
+            className="btn-primary"
+          >
+            {isLoading ? 'Saving...' : 'Save Changes'}
+          </button>
+        </form>
 
-            <button
-              type="submit"
-              disabled={isLoading || newUsername === username}
-              className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold rounded-lg transition-colors"
-            >
-              {isLoading ? 'Saving...' : 'Save Changes'}
-            </button>
-          </form>
-        </div>
-
-        {/* Logout */}
-        <div className="bg-white rounded-2xl shadow-sm p-6">
-          <h2 className="text-sm font-medium text-gray-700 mb-4">Account</h2>
+        {/* Danger zone */}
+        <div className="pt-2 border-t border-oxo-border">
+          <p className="text-xs text-oxo-faint mb-3 uppercase tracking-wider">Danger Zone</p>
           <button
             onClick={handleLogout}
-            className="w-full py-2 px-4 border border-red-300 text-red-600 hover:bg-red-50 font-semibold rounded-lg transition-colors"
+            className="btn-danger"
           >
             Sign Out
           </button>

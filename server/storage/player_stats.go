@@ -3,21 +3,22 @@ package storage
 import (
 	"context"
 	"encoding/json"
+	"time"
+
 	"github.com/heroiclabs/nakama-common/runtime"
 )
 
 type PlayerStats struct {
-    UserID       string `json:"userId"`
-    Wins         int    `json:"wins"`
-    Losses       int    `json:"losses"`
-    Draws        int    `json:"draws"`
-    WinStreak    int    `json:"winStreak"`
-    BestWinStreak int   `json:"bestWinStreak"`
-    TotalGames   int    `json:"totalGames"`
+	UserID        string `json:"userId"`
+	Wins          int    `json:"wins"`
+	Losses        int    `json:"losses"`
+	Draws         int    `json:"draws"`
+	WinStreak     int    `json:"winStreak"`
+	BestWinStreak int    `json:"bestWinStreak"`
+	TotalGames    int    `json:"totalGames"`
 }
 
-
-func ReadStats (
+func ReadStats(
 	ctx context.Context,
 	nk runtime.NakamaModule,
 	userId string,
@@ -25,16 +26,14 @@ func ReadStats (
 	reads := []*runtime.StorageRead{
 		{
 			Collection: "player_stats",
-			Key: "stats",
-			UserID: userId,
+			Key:        "stats",
+			UserID:     userId,
 		},
 	}
-	// nk.StorageRead() takes []*runtime.StorageRead and returns []*api.StorageObject
 	objects, err := nk.StorageRead(ctx, reads)
-	if(err != nil){
+	if err != nil {
 		return PlayerStats{}, err
 	}
-
 
 	if len(objects) == 0 {
 		return PlayerStats{UserID: userId}, nil
@@ -45,7 +44,6 @@ func ReadStats (
 	}
 	return stats, nil
 }
-
 
 func WriteStats(
 	ctx context.Context,
@@ -72,21 +70,23 @@ func WriteStats(
 	return err
 }
 
-// UpdateMatchStats reads, updates, and writes stats for both players after a game ends.
-// winner is a userId for a normal win, "draw" for a draw, or "" to skip (shouldn't happen).
-
+// UpdateMatchStats reads, updates, and writes aggregate stats for both players,
+// then appends a game history entry for each player.
+// winner is a userId for a normal win, "draw" for a draw.
 func UpdateMatchStats(
 	ctx context.Context,
 	nk runtime.NakamaModule,
-	playerOneId string,
-	playerTwoId string,
+	p1Id, p1Username, p1Symbol,
+	p2Id, p2Username, p2Symbol,
 	winner string,
+	matchID string,
+	shortCode string,
 ) error {
-	p1, err := ReadStats(ctx, nk, playerOneId)
+	p1, err := ReadStats(ctx, nk, p1Id)
 	if err != nil {
 		return err
 	}
-	p2, err := ReadStats(ctx, nk, playerTwoId)
+	p2, err := ReadStats(ctx, nk, p2Id)
 	if err != nil {
 		return err
 	}
@@ -94,34 +94,67 @@ func UpdateMatchStats(
 	p1.TotalGames++
 	p2.TotalGames++
 
-	switch winner{
-		case "draw":
-			p1.Draws++
-			p1.WinStreak = 0
-			p2.Draws++
-			p2.WinStreak = 0
-		
-		case playerOneId:
-			p1.Wins++
-			p1.WinStreak++
-			if p1.WinStreak > p1.BestWinStreak {
-				p1.BestWinStreak = p1.WinStreak
-			}
-			p2.Losses++
-			p2.WinStreak = 0
-		
-		case playerTwoId:
-			p2.Wins++
-			p2.WinStreak++
-			if p2.WinStreak > p2.BestWinStreak {
-				p2.BestWinStreak = p2.WinStreak
-			}
-			p1.Losses++
-			p1.WinStreak = 0
+	var p1Result, p2Result string
+
+	switch winner {
+	case "draw":
+		p1.Draws++
+		p1.WinStreak = 0
+		p2.Draws++
+		p2.WinStreak = 0
+		p1Result = "draw"
+		p2Result = "draw"
+
+	case p1Id:
+		p1.Wins++
+		p1.WinStreak++
+		if p1.WinStreak > p1.BestWinStreak {
+			p1.BestWinStreak = p1.WinStreak
+		}
+		p2.Losses++
+		p2.WinStreak = 0
+		p1Result = "win"
+		p2Result = "loss"
+
+	case p2Id:
+		p2.Wins++
+		p2.WinStreak++
+		if p2.WinStreak > p2.BestWinStreak {
+			p2.BestWinStreak = p2.WinStreak
+		}
+		p1.Losses++
+		p1.WinStreak = 0
+		p1Result = "loss"
+		p2Result = "win"
 	}
+
 	if err := WriteStats(ctx, nk, p1); err != nil {
 		return err
 	}
-	return WriteStats(ctx, nk, p2)
-	
+	if err := WriteStats(ctx, nk, p2); err != nil {
+		return err
+	}
+
+	// Write game history entries for both players (non-fatal on failure).
+	now := time.Now().Unix()
+	_ = WriteGameHistoryEntry(ctx, nk, p1Id, GameHistoryEntry{
+		MatchID:      matchID,
+		ShortCode:    shortCode,
+		OpponentID:   p2Id,
+		OpponentName: p2Username,
+		Result:       p1Result,
+		MySymbol:     p1Symbol,
+		PlayedAt:     now,
+	})
+	_ = WriteGameHistoryEntry(ctx, nk, p2Id, GameHistoryEntry{
+		MatchID:      matchID,
+		ShortCode:    shortCode,
+		OpponentID:   p1Id,
+		OpponentName: p1Username,
+		Result:       p2Result,
+		MySymbol:     p2Symbol,
+		PlayedAt:     now,
+	})
+
+	return nil
 }

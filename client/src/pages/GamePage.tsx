@@ -1,15 +1,17 @@
-import { useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useGameStore } from '../stores/gameStore';
 import { useNakamaSocket } from '../hooks/useNakamaSocket';
-import { joinMatch, leaveMatch, sendMove } from '../services/matchService';
+import { joinByCode, joinMatch, leaveMatch, sendMove, sendRematchRequest, sendRematch, sendRematchDecline } from '../services/matchService';
 import Board from '../components/game/Board';
 import GameStatus from '../components/game/GameStatus';
+import Navbar from '../components/Navbar';
 
 export default function GamePage() {
-  const { matchId } = useParams<{ matchId: string }>();
+  const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { session, userId, username } = useAuthStore();
   const {
     board,
@@ -20,97 +22,192 @@ export default function GamePage() {
     isMyTurn,
     mySymbol,
     error,
+    rematchRequestedByMe,
+    rematchRequestedByOpponent,
+    rematchDeclined,
     setMatchId,
     resetGame,
+    setRematchRequestedByMe,
+    setRematchRequestedByOpponent,
+    setRematchDeclined,
+    pendingRematchCode,
+    setPendingRematchCode,
   } = useGameStore();
 
-  // Connect socket
   useNakamaSocket();
 
-  // Join the match on mount
-  useEffect(() => {
-    if (!matchId || !session) return;
+  // The real Nakama match ID resolved from the short code
+  const matchIdRef = useRef<string | null>(null);
+  const [isJoining, setIsJoining] = useState(true);
 
-    setMatchId(matchId);
-    joinMatch(matchId).catch((err) => {
-      console.error('Failed to join match:', err);
-    });
+  useEffect(() => {
+    if (!code || !session) return;
+
+    setIsJoining(true);
+    let cancelled = false;
+
+    (async () => {
+      try {
+        // A 5-char short code (Create Room / Join by Code / Rematch) needs
+        // resolution via the join_by_code RPC.  A full Nakama matchId (Quick
+        // Match) already IS the matchId — skip the RPC and use it directly.
+        const isShortCode = code.length <= 8 && !code.includes('-') && !code.includes('.');
+        const matchId = isShortCode ? await joinByCode(session, code) : code;
+        if (cancelled) return;
+
+        matchIdRef.current = matchId;
+        setMatchId(matchId);
+        await joinMatch(matchId);
+        if (!cancelled) setIsJoining(false);
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Failed to join match:', err);
+          useGameStore.getState().setError('Room not found or no longer available.');
+          setIsJoining(false);
+        }
+      }
+    })();
 
     return () => {
-      // Leave match on unmount
-      leaveMatch(matchId).catch(() => {});
+      cancelled = true;
+      if (matchIdRef.current) {
+        leaveMatch(matchIdRef.current).catch(() => {});
+        matchIdRef.current = null;
+      }
+      resetGame();
     };
-  }, [matchId]);
+  }, [code, location.key]);
+
+  // When the server confirms a rematch, navigate to the same game URL.
+  // Changing location.key re-triggers the [code, location.key] effect above,
+  // which reuses the exact same joinByCode → joinMatch logic as the initial join.
+  // The effect cleanup (leaveMatch) handles leaving the old match automatically.
+  useEffect(() => {
+    if (!pendingRematchCode) return;
+    setPendingRematchCode(null);
+    navigate(`/game/${pendingRematchCode}`, { replace: true });
+  }, [pendingRematchCode, navigate, setPendingRematchCode]);
 
   const handleMove = async (position: number) => {
-    if (!matchId || !isMyTurn) return;
+    if (!matchIdRef.current || !isMyTurn) return;
     try {
-      await sendMove(matchId, position);
+      await sendMove(matchIdRef.current, position);
     } catch (err) {
       console.error('Failed to send move:', err);
     }
   };
 
   const handleLeave = async () => {
-    if (matchId) await leaveMatch(matchId).catch(() => {});
+    const mid = matchIdRef.current;
+    matchIdRef.current = null; // null before navigate so cleanup doesn't re-send
+    if (mid) await leaveMatch(mid).catch(() => {});
     resetGame();
     navigate('/lobby');
   };
 
-  // Find opponent
+  const handlePlayAgain = async () => {
+    if (!matchIdRef.current) return;
+    setRematchDeclined(false);
+    setRematchRequestedByMe(true);
+    try {
+      await sendRematchRequest(matchIdRef.current);
+    } catch (err) {
+      console.error('Failed to request rematch:', err);
+      setRematchRequestedByMe(false);
+    }
+  };
+
+  const handleAcceptRematch = async () => {
+    if (!matchIdRef.current) return;
+    setRematchRequestedByOpponent(false);
+    try {
+      await sendRematch(matchIdRef.current);
+    } catch (err) {
+      console.error('Failed to accept rematch:', err);
+    }
+  };
+
+  const handleDeclineRematch = async () => {
+    if (!matchIdRef.current) return;
+    setRematchRequestedByOpponent(false);
+    try {
+      await sendRematchDecline(matchIdRef.current);
+    } catch (err) {
+      console.error('Failed to decline rematch:', err);
+    }
+  };
+
   const opponent = players.find((p) => p.userId !== userId);
   const me = players.find((p) => p.userId === userId);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-oxo-bg animate-fade-in">
+      <Navbar showBack backPath="/lobby" backLabel="Lobby" />
 
-      {/* Top bar */}
-      <nav className="bg-white shadow-sm px-6 py-4 flex items-center justify-between">
-        <button
-          onClick={() => navigate('/lobby')}
-          className="text-sm text-gray-500 hover:text-gray-700"
-        >
-          ← Lobby
-        </button>
-        <span className="text-xs text-gray-400 font-mono truncate max-w-xs">
-          {matchId}
-        </span>
-        <button
-          onClick={handleLeave}
-          className="text-sm text-red-500 hover:text-red-700"
-        >
-          Leave
-        </button>
-      </nav>
+      <div className="max-w-sm mx-auto px-6 py-8 space-y-6 flex flex-col items-center">
 
-      <div className="max-w-sm mx-auto px-6 py-8 space-y-6">
+        {/* Room code strip */}
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] text-oxo-faint uppercase tracking-widest">Room</span>
+          <span className="font-mono text-sm font-bold text-oxo-x tracking-[0.2em]">{code}</span>
+        </div>
 
         {/* Player bar */}
-        <div className="flex items-center justify-between bg-white rounded-2xl shadow-sm p-4">
-          <div className={`text-center flex-1 ${me ? '' : 'opacity-40'}`}>
-            <p className="font-semibold text-gray-900 text-sm truncate">
-              {username} {me ? `(${me.symbol})` : ''}
-            </p>
-            <p className={`text-xs mt-1 ${isMyTurn && phase === 'playing' ? 'text-blue-600 font-medium' : 'text-gray-400'}`}>
-              {isMyTurn && phase === 'playing' ? '● your turn' : '○ waiting'}
-            </p>
+        <div className="flex items-center justify-between w-full gap-3">
+          {/* My side */}
+          <div className={`flex-1 flex flex-col items-start gap-1.5 ${me ? '' : 'opacity-30'}`}>
+            <div className="flex items-center gap-2">
+              {isMyTurn && phase === 'playing' && (
+                <span className="w-2 h-2 rounded-full bg-oxo-x dot-pulse flex-shrink-0" />
+              )}
+              <span className="text-sm font-semibold text-oxo-text truncate max-w-[90px]">
+                {username}
+              </span>
+            </div>
+            {me && (
+              <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${
+                me.symbol === 'X' ? 'bg-oxo-x/10 text-oxo-x' : 'bg-oxo-o/10 text-oxo-o'
+              }`}>
+                {me.symbol}
+              </span>
+            )}
           </div>
 
-          <div className="text-gray-300 font-bold text-lg px-4">vs</div>
+          {/* VS badge */}
+          <div className="flex-shrink-0 text-oxo-faint text-[10px] font-bold tracking-widest border border-oxo-border rounded-full px-3 py-1">
+            VS
+          </div>
 
-          <div className={`text-center flex-1 ${opponent ? '' : 'opacity-40'}`}>
-            <p className="font-semibold text-gray-900 text-sm truncate">
-              {opponent ? `${opponent.username} (${opponent.symbol})` : 'Waiting...'}
-            </p>
-            <p className={`text-xs mt-1 ${!isMyTurn && phase === 'playing' ? 'text-blue-600 font-medium' : 'text-gray-400'}`}>
-              {!isMyTurn && phase === 'playing' ? '● their turn' : '○ waiting'}
-            </p>
+          {/* Opponent side */}
+          <div className={`flex-1 flex flex-col items-end gap-1.5 ${opponent ? '' : 'opacity-30'}`}>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-oxo-text truncate max-w-[90px]">
+                {opponent ? opponent.username : 'Waiting...'}
+              </span>
+              {!isMyTurn && phase === 'playing' && opponent && (
+                <span className="w-2 h-2 rounded-full bg-oxo-x dot-pulse flex-shrink-0" />
+              )}
+            </div>
+            {opponent && (
+              <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${
+                opponent.symbol === 'X' ? 'bg-oxo-x/10 text-oxo-x' : 'bg-oxo-o/10 text-oxo-o'
+              }`}>
+                {opponent.symbol}
+              </span>
+            )}
           </div>
         </div>
 
+        {/* Joining indicator */}
+        {isJoining && !error && (
+          <div className="w-full p-3 bg-oxo-surface border border-oxo-border rounded-lg text-sm text-center text-oxo-muted animate-pulse">
+            Connecting to room…
+          </div>
+        )}
+
         {/* Error */}
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm text-center">
+          <div className="w-full p-3 bg-red-950/60 border border-red-800 text-red-400 rounded-lg text-sm text-center animate-fade-up">
             {error}
           </div>
         )}
@@ -135,14 +232,76 @@ export default function GamePage() {
 
         {/* Post-game actions */}
         {phase === 'finished' && (
-          <div className="space-y-3 pt-2">
+          <div className="w-full space-y-3">
+
+            {/* Opponent sent a rematch request — show accept / decline */}
+            {rematchRequestedByOpponent && !rematchRequestedByMe ? (
+              <>
+                <p className="text-center text-xs text-oxo-faint tracking-wide animate-fade-up">
+                  Opponent wants a rematch!
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleAcceptRematch}
+                    className="flex-1 py-3 font-bold rounded-xl text-sm tracking-wide transition-all"
+                    style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 50%, #00d4ff 100%)', color: '#fff' }}
+                  >
+                    Accept
+                  </button>
+                  <button
+                    onClick={handleDeclineRematch}
+                    className="flex-1 py-3 font-semibold rounded-xl text-sm border border-oxo-border text-oxo-muted hover:text-white hover:border-oxo-border-2 transition-colors"
+                  >
+                    Decline
+                  </button>
+                </div>
+              </>
+            ) : rematchRequestedByMe ? (
+              /* I sent a request — waiting */
+              <button
+                disabled
+                className="w-full py-3 font-bold rounded-xl text-sm tracking-wide opacity-50 cursor-not-allowed"
+                style={{ background: 'rgba(124,58,237,0.15)', color: 'rgba(255,255,255,0.5)' }}
+              >
+                Waiting for opponent...
+              </button>
+            ) : (
+              /* Default — show Play Again */
+              <>
+                {rematchDeclined && (
+                  <p className="text-center text-xs text-oxo-o tracking-wide animate-fade-up">
+                    Opponent declined the rematch.
+                  </p>
+                )}
+                <button
+                  onClick={handlePlayAgain}
+                  className="w-full py-3 font-bold rounded-xl transition-all text-sm tracking-wide text-white"
+                  style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 50%, #00d4ff 100%)' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 22px rgba(124,58,237,0.45)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none'; }}
+                >
+                  Play Again
+                </button>
+              </>
+            )}
+
             <button
               onClick={handleLeave}
-              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors"
+              className="w-full py-2.5 border border-oxo-border text-oxo-muted hover:text-white hover:border-oxo-border-2 font-semibold rounded-xl transition-colors text-sm"
             >
               Back to Lobby
             </button>
           </div>
+        )}
+
+        {/* Leave during game */}
+        {phase === 'playing' && (
+          <button
+            onClick={handleLeave}
+            className="w-full py-2 text-sm text-oxo-faint hover:text-oxo-o transition-colors"
+          >
+            Forfeit & Leave
+          </button>
         )}
 
       </div>

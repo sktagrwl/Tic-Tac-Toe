@@ -29,7 +29,17 @@ type MatchState struct {
     Winner      string       `json:"winner"`       // userId | "draw" | ""
     WinLine     [3]int       `json:"winLine"`      // [-1,-1,-1] when none
     MoveCount   int          `json:"moveCount"`
+    IsPublic           bool   `json:"isPublic"`           // true = quick-match pool room
+    RematchId          string `json:"rematchId"`          // non-empty once a rematch has been created
+    RematchRequesterId string `json:"rematchRequesterId"` // userId who sent the pending request
 }
+
+const (
+    // LabelOpen marks a private room whose host is waiting — shown in room discovery.
+    LabelOpen = "open"
+    // LabelQuick marks a quick-match room — shown in the quick-match pool, NOT in discovery.
+    LabelQuick = "quick"
+)
 
 // CheckWinner returns the winning symbol ("X" or "O") and the winning line indices.
 // Returns ("", [3]int{-1,-1,-1}) if no winner yet.

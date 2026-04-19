@@ -1,3 +1,137 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html {
+    background-color: #000000;
+  }
+
+  body {
+    background-color: #000000;
+    color: #ffffff;
+    font-family: "Space Grotesk", Inter, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  /* Dot-grid background — SplashPage */
+  .bg-dot-grid {
+    background-image: radial-gradient(#1a1a1a 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  /* Arena ambient — deep radial glow from top + two corner pools */
+  .bg-arena {
+    background:
+      radial-gradient(ellipse 130% 55% at 50% -8%,  rgba(124, 58, 237, 0.18) 0%, transparent 55%),
+      radial-gradient(ellipse 55%  45% at  4% 105%, rgba(0, 212, 255, 0.07)   0%, transparent 52%),
+      radial-gradient(ellipse 45%  35% at 96% 105%, rgba(255, 0, 110, 0.06)   0%, transparent 50%);
+  }
+
+  /* Scan-line grid — futuristic floor texture */
+  .bg-scan-grid {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.016) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.016) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* Winning cell glows */
+  .cell-glow-x {
+    box-shadow: 0 0 12px 3px rgba(0, 212, 255, 0.5) !important;
+    border-color: #00d4ff !important;
+    background-color: rgba(0, 212, 255, 0.08) !important;
+  }
+
+  .cell-glow-o {
+    box-shadow: 0 0 12px 3px rgba(255, 0, 110, 0.5) !important;
+    border-color: #ff006e !important;
+    background-color: rgba(255, 0, 110, 0.08) !important;
+  }
+
+  /* Neon text glows for X and O inside cells */
+  .text-glow-x {
+    text-shadow: 0 0 12px rgba(0, 212, 255, 0.8);
+  }
+
+  .text-glow-o {
+    text-shadow: 0 0 12px rgba(255, 0, 110, 0.8);
+  }
+
+  /* Animated wordmark glow — X letter */
+  .animate-glow-text-x {
+    animation: glow-text-x 2.5s ease-in-out infinite;
+  }
+
+  /* Animated wordmark glow — O letter */
+  .animate-glow-text-o {
+    animation: glow-text-o 2s ease-in-out infinite;
+  }
+
+  /* Scanning / searching pulse */
+  .animate-scan-pulse {
+    animation: scan-pulse 1.4s ease-in-out infinite;
+  }
+
+  /* Active player turn indicator pulsing dot */
+  .dot-pulse {
+    animation: dot-ping 1.4s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+  }
+
+  @keyframes dot-ping {
+    0%   { box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.6); }
+    70%  { box-shadow: 0 0 0 6px rgba(0, 212, 255, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(0, 212, 255, 0); }
+  }
+
+  @keyframes glow-text-x {
+    0%, 100% { text-shadow: 0 0 18px rgba(0, 212, 255, 0.55); }
+    50%       { text-shadow: 0 0 35px rgba(0, 212, 255, 1), 0 0 55px rgba(0, 212, 255, 0.45); }
+  }
+
+  @keyframes glow-text-o {
+    0%, 100% { text-shadow: 0 0 18px rgba(255, 0, 110, 0.55); }
+    50%       { text-shadow: 0 0 35px rgba(255, 0, 110, 1), 0 0 55px rgba(255, 0, 110, 0.45); }
+  }
+
+  @keyframes scan-pulse {
+    0%, 100% { opacity: 0.45; }
+    50%       { opacity: 1; }
+  }
+}
+
+@layer components {
+  /* Reusable input */
+  .input-oxo {
+    @apply w-full px-4 py-2.5 rounded-lg text-white placeholder-oxo-faint
+           bg-[#0d0d0d] border border-oxo-border
+           focus:outline-none focus:border-oxo-accent-2
+           focus:ring-1 focus:ring-oxo-accent-2
+           transition-colors duration-150;
+  }
+
+  /* Primary CTA */
+  .btn-primary {
+    @apply w-full py-2.5 px-4 bg-oxo-accent hover:bg-oxo-accent-2
+           text-white font-semibold rounded-lg
+           transition-colors duration-150
+           disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  /* Danger / sign out */
+  .btn-danger {
+    @apply w-full py-2.5 px-4 border border-rose-800 text-rose-400
+           hover:bg-rose-950 font-semibold rounded-lg
+           transition-colors duration-150;
+  }
+
+  /* Arena card — glass base */
+  .card-arena {
+    @apply rounded-2xl border relative overflow-hidden;
+    background: rgba(255, 255, 255, 0.025);
+    border-color: rgba(255, 255, 255, 0.07);
+  }
+}
