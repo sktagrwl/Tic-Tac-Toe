@@ -47,6 +47,7 @@ func InitModule(
         return err
     }
     if err := initializer.RegisterRpc("get_stats", rpc.RpcGetStatus); err != nil {
+        logger.Error("Failed to register get_stats RPC: %v", err)
         return err
     }
     if err := initializer.RegisterRpc("get_game_history", rpc.RpcGetGameHistory); err != nil {

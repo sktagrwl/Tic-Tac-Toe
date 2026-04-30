@@ -23,7 +23,7 @@ export default function ProfilePage() {
         username: newUsername,
         display_name: newUsername,
       });
-      useAuthStore.setState({ username: newUsername });
+      useAuthStore.setState({ username: newUsername, displayName: newUsername });
       setMessage({ type: 'success', text: 'Username updated successfully' });
     } catch (err) {
       setMessage({

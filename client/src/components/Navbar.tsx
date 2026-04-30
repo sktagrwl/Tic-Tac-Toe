@@ -21,7 +21,8 @@ function OxoLogo() {
 
 export default function Navbar({ showBack = false, backPath = '/lobby', backLabel = 'Lobby', borderless = false }: NavbarProps) {
   const navigate = useNavigate();
-  const { isAuthenticated, username, logout } = useAuthStore();
+  const { isAuthenticated, username, displayName, logout } = useAuthStore();
+  const displayLabel = displayName || username;
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -67,9 +68,9 @@ export default function Navbar({ showBack = false, backPath = '/lobby', backLabe
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
             <div className="w-8 h-8 rounded-full bg-oxo-accent flex items-center justify-center text-white font-bold text-sm">
-              {username.charAt(0).toUpperCase()}
+              {displayLabel.charAt(0).toUpperCase()}
             </div>
-            <span className="text-sm font-medium text-oxo-muted hidden sm:block">{username}</span>
+            <span className="text-sm font-medium text-oxo-muted hidden sm:block">{displayLabel}</span>
             <span className="text-oxo-faint text-xs">▾</span>
           </button>
 

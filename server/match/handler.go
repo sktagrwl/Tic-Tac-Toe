@@ -139,7 +139,7 @@ func (m *TicTacToeMatch) MatchJoin(
         s.CurrentTurn = s.Players[0].UserID // X always goes first
 
         dispatcher.MatchLabelUpdate("")
-        if err := storage.DeleteRoomHost(ctx, nk, matchId, s.Players[0].UserID); err != nil {
+        if err := storage.DeleteRoomHost(ctx, nk, matchId); err != nil {
             logger.Error("MatchJoin: failed to delete room host: %v", err)
         }
 
@@ -180,7 +180,7 @@ func (m *TicTacToeMatch) MatchLeave(
         // and remove the code→matchId mapping so nobody can join an abandoned room.
         if s.Phase == PhaseWaiting {
             dispatcher.MatchLabelUpdate("")
-            if err := storage.DeleteRoomHost(ctx, nk, matchId, presence.GetUserId()); err != nil {
+            if err := storage.DeleteRoomHost(ctx, nk, matchId); err != nil {
                 logger.Error("MatchLeave: failed to delete room host: %v", err)
             }
             if waitingCode, err := storage.GetCodeForMatch(ctx, nk, matchId); err == nil && waitingCode != "" {
@@ -258,15 +258,6 @@ func (m *TicTacToeMatch) MatchLoop(
             if s.RematchRequesterId == "" {
                 // First request — record it and notify opponent.
                 s.RematchRequesterId = senderID
-                opponentID := OtherPlayerID(s, senderID)
-                var opponentPresence runtime.Presence
-                for _, p := range s.Players {
-                    if p.UserID == opponentID {
-                        opponentPresence = msg // placeholder; we broadcast by userId below
-                        _ = opponentPresence
-                        break
-                    }
-                }
                 // Broadcast to all (both players) but filter to opponent by userId
                 reqData, _ := json.Marshal(map[string]string{"from": senderID})
                 // Send only to presences of the opponent
@@ -467,7 +458,7 @@ func (m *TicTacToeMatch) MatchTerminate(
             logger.Error("MatchTerminate: failed to delete room code: %v", err)
         }
     }
-    if err := storage.DeleteRoomHost(ctx, nk, matchId, ""); err != nil {
+    if err := storage.DeleteRoomHost(ctx, nk, matchId); err != nil {
         logger.Error("MatchTerminate: failed to delete room host: %v", err)
     }
     return state

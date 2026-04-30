@@ -50,7 +50,7 @@ func GetRoomHostByMatchId(ctx context.Context, nk runtime.NakamaModule, matchId 
 }
 
 // DeleteRoomHost removes the host record for a match.
-func DeleteRoomHost(ctx context.Context, nk runtime.NakamaModule, matchId, _ string) error {
+func DeleteRoomHost(ctx context.Context, nk runtime.NakamaModule, matchId string) error {
 	return nk.StorageDelete(ctx, []*runtime.StorageDelete{
 		{Collection: roomHostCollection, Key: matchId, UserID: systemUserId},
 	})

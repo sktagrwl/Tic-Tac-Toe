@@ -7,12 +7,18 @@ type AuthMode = 'login' | 'register';
 
 export default function SplashPage() {
   const navigate = useNavigate();
-  const { login, register, loginWithGoogle, isLoading, error, clearError } = useAuthStore();
+  const {
+    login, register, loginWithGoogle,
+    isLoading, error, clearError,
+    sessionExpiredMessage, clearSessionExpiredMessage,
+  } = useAuthStore();
 
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,7 +27,7 @@ export default function SplashPage() {
     if (mode === 'login') {
       await login(email, password);
     } else {
-      await register(email, password, username);
+      await register(email, password, username, firstName, lastName);
     }
 
     const { isAuthenticated } = useAuthStore.getState();
@@ -32,6 +38,7 @@ export default function SplashPage() {
 
   const switchMode = () => {
     clearError();
+    clearSessionExpiredMessage();
     setMode(mode === 'login' ? 'register' : 'login');
   };
 
@@ -51,6 +58,13 @@ export default function SplashPage() {
           </p>
         </div>
 
+        {/* Session expired notice */}
+        {sessionExpiredMessage && (
+          <div className="mb-4 p-3 bg-amber-950/60 border border-amber-700 text-amber-300 rounded-lg text-sm animate-fade-up">
+            {sessionExpiredMessage}
+          </div>
+        )}
+
         {/* Error */}
         {error && (
           <div className="mb-4 p-3 bg-red-950/60 border border-red-800 text-red-400 rounded-lg text-sm animate-fade-up">
@@ -64,6 +78,7 @@ export default function SplashPage() {
             onSuccess={async (credentialResponse) => {
               if (!credentialResponse.credential) return;
               clearError();
+              clearSessionExpiredMessage();
               await loginWithGoogle(credentialResponse.credential);
               const { isAuthenticated } = useAuthStore.getState();
               if (isAuthenticated) navigate('/lobby');
@@ -88,21 +103,51 @@ export default function SplashPage() {
         {/* Email/Password Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === 'register' && (
-            <div>
-              <label className="block text-sm font-medium text-oxo-muted mb-1.5">
-                Username
-              </label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                minLength={3}
-                maxLength={20}
-                placeholder="Choose a username"
-                className="input-oxo"
-              />
-            </div>
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-oxo-muted mb-1.5">
+                    First Name
+                  </label>
+                  <input
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                    placeholder="Jane"
+                    className="input-oxo"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-oxo-muted mb-1.5">
+                    Last Name
+                  </label>
+                  <input
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                    placeholder="Smith"
+                    className="input-oxo"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-oxo-muted mb-1.5">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                  minLength={3}
+                  maxLength={20}
+                  placeholder="Choose a username"
+                  className="input-oxo"
+                />
+              </div>
+            </>
           )}
 
           <div>
