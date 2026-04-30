@@ -198,18 +198,6 @@ These two file pairs must stay in sync when adding new op-codes or state fields:
 
 ---
 
-## Troubleshooting
-
-| Symptom | Likely cause | Fix |
-|---------|-------------|-----|
-| `hostname resolving error: no such host` | Railway can't reach Supabase Direct Connection (IPv6) | Use Session Pooler URI from Supabase dashboard |
-| `tenant/user not found` | Wrong pooler hostname | Copy the exact connection string — don't edit it manually |
-| `origin_mismatch` (Google OAuth) | Domain not in Authorized JavaScript Origins | Add exact domain in Google Cloud Console, wait 5 min, retest in incognito |
-| Game state not syncing | WebSocket failing | Verify `VITE_NAKAMA_SSL=true` and Railway domain is correct |
-| Nakama log: `insecure default parameter value` | Server key is still `defaultkey` | Set `NAKAMA_SERVER_KEY` to a strong random value on Railway |
-
----
-
 ## Security Notes
 
 - Set a strong `NAKAMA_SERVER_KEY` on Railway (not `defaultkey`).
