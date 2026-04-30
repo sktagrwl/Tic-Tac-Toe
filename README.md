@@ -148,30 +148,6 @@ The `server/` directory mounts into Nakama at `/nakama/data/modules`.
 
 ---
 
-## Project Structure
-
-```
-├── client/               # React frontend (Vite + TypeScript)
-│   └── src/
-│       ├── pages/        # SplashPage, LobbyPage, GamePage, StatsPage, ProfilePage
-│       ├── components/   # Navbar, Board, Cell, GameStatus
-│       ├── stores/       # Zustand: authStore, gameStore, statsStore
-│       ├── services/     # Nakama SDK wrappers: auth, match, stats
-│       ├── hooks/        # useNakamaSocket — singleton WebSocket manager
-│       └── types/        # Shared types mirroring Go structs
-│
-├── server/               # Go plugin (Nakama authoritative match handler)
-│   ├── main.go           # Plugin entry — registers match handler + RPCs
-│   ├── match/            # Game state, op-codes, match lifecycle
-│   ├── rpc/              # matchmake, join_by_code, list_rooms, game_history
-│   └── storage/          # player_stats, game_history, room_codes, room_host
-│
-├── docker-compose.yml    # Local dev: Nakama + plugin builder
-└── nakama-config.yml     # Nakama config (Google OAuth client ID)
-```
-
----
-
 ## How It Works
 
 ### Match flow
