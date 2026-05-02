@@ -44,7 +44,7 @@ export default function SplashPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-oxo-bg bg-dot-grid animate-fade-in">
-      <div className="w-full max-w-sm bg-oxo-surface border border-oxo-border rounded-2xl p-8 shadow-2xl">
+      <div className="w-full max-w-sm bg-oxo-surface border border-oxo-border rounded-2xl p-6 sm:p-8 shadow-2xl">
 
         {/* OXO Wordmark */}
         <div className="text-center mb-8">
@@ -104,7 +104,7 @@ export default function SplashPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === 'register' && (
             <>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 min-[360px]:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-oxo-muted mb-1.5">
                     First Name

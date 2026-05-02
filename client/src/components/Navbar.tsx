@@ -65,7 +65,7 @@ export default function Navbar({ showBack = false, backPath = '/lobby', backLabe
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setMenuOpen((v) => !v)}
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity min-h-[44px]"
           >
             <div className="w-8 h-8 rounded-full bg-oxo-accent flex items-center justify-center text-white font-bold text-sm">
               {displayLabel.charAt(0).toUpperCase()}

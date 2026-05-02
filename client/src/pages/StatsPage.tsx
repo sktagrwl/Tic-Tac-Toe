@@ -16,7 +16,7 @@ function StatsPanel({ stats, loading, error }: {
     : 0;
 
   return (
-    <div className="w-full md:w-[40%] flex flex-col justify-center px-6 md:px-10 py-8 md:py-0 select-none flex-shrink-0">
+    <div className="w-full md:w-[40%] md:max-w-[480px] flex flex-col justify-center px-6 md:px-10 py-8 md:py-0 select-none flex-shrink-0">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white tracking-tight">Your Stats</h1>
         <p className="text-[11px] text-oxo-faint mt-0.5 tracking-wide uppercase">All time performance</p>
@@ -85,7 +85,7 @@ function StatCard({ value, label, color, accent }: {
       className="relative rounded-xl p-4 border border-oxo-border flex flex-col gap-1 overflow-hidden"
       style={{ background: accent }}
     >
-      <p className={`text-4xl font-bold tabular-nums leading-none ${color}`}>{value}</p>
+      <p className={`text-3xl md:text-4xl font-bold tabular-nums leading-none ${color}`}>{value}</p>
       <p className="text-[10px] text-oxo-faint uppercase tracking-[0.2em] mt-1">{label}</p>
     </div>
   );
@@ -245,7 +245,7 @@ export default function StatsPage() {
   useEffect(() => {
     fetchStats();
     fetchHistory('');
-  }, []);
+  }, [fetchStats, fetchHistory]);
 
   return (
     <div className="h-[100dvh] overflow-hidden bg-black flex flex-col relative">

@@ -191,7 +191,7 @@ export default function LobbyPage() {
 
           {/* Wordmark */}
           <div className="flex flex-col items-center gap-2">
-            <h1 className="text-[90px] font-bold leading-none tracking-tight">
+            <h1 className="text-[70px] lg:text-[90px] 2xl:text-[110px] font-bold leading-none tracking-tight">
               <span className="text-oxo-o animate-glow-text-o">O</span>
               <span className="text-oxo-x animate-glow-text-x" style={{ animationDelay: '0.6s' }}>X</span>
               <span className="text-oxo-o animate-glow-text-o" style={{ animationDelay: '1.2s' }}>O</span>
@@ -227,7 +227,7 @@ export default function LobbyPage() {
         />
 
         {/* ════ RIGHT PANEL — action cards ═══════════════════════════════ */}
-        <div className="flex-1 md:flex-none md:w-[390px] flex flex-col justify-center gap-3 px-5 md:px-10 py-5 md:py-0 overflow-hidden">
+        <div className="flex-1 md:flex-none md:w-[390px] lg:w-[430px] xl:w-[460px] flex flex-col justify-center gap-3 px-5 md:px-10 py-5 md:py-0 overflow-hidden">
 
           {/* Mobile: compact header */}
           <div className="md:hidden flex items-center justify-between mb-1">
@@ -346,16 +346,17 @@ export default function LobbyPage() {
                           </button>
                         </div>
 
-                        {/* Stats hover reveal */}
-                        {hoveredCode === room.code && (
-                          <div className="flex items-center gap-4 px-4 py-2 bg-white/[0.03] border-t border-white/[0.04] animate-fade-up">
-                            <StatHover label="W" value={room.stats.wins}      color="text-[#22c55e]" />
-                            <StatHover label="L" value={room.stats.losses}    color="text-oxo-o"     />
-                            <StatHover label="D" value={room.stats.draws}     color="text-oxo-muted" />
-                            <StatHover label="Streak" value={room.stats.winStreak} color="text-oxo-x" />
-                            <span className="ml-auto text-[9px] text-oxo-faint">{room.stats.totalGames} games</span>
-                          </div>
-                        )}
+                        {/* Stats — always visible on mobile (touch has no hover), hover-reveal on desktop */}
+                        <div className={[
+                          'flex items-center gap-4 px-4 py-2 bg-white/[0.03] border-t border-white/[0.04]',
+                          hoveredCode !== room.code ? 'md:hidden' : 'animate-fade-up',
+                        ].join(' ')}>
+                          <StatHover label="W" value={room.stats.wins}      color="text-[#22c55e]" />
+                          <StatHover label="L" value={room.stats.losses}    color="text-oxo-o"     />
+                          <StatHover label="D" value={room.stats.draws}     color="text-oxo-muted" />
+                          <StatHover label="Streak" value={room.stats.winStreak} color="text-oxo-x" />
+                          <span className="ml-auto text-[9px] text-oxo-faint">{room.stats.totalGames} games</span>
+                        </div>
                       </div>
                     ))}
                   </div>

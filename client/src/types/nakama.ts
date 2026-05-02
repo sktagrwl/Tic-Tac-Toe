@@ -49,10 +49,6 @@ export interface RematchRequestPayload {
   from: string; // userId of the player who wants a rematch
 }
 
-export interface RematchDeclinePayload {
-  // empty — presence of this message is the signal
-}
-
 export interface ErrorPayload {
   code: number;
   message: string;

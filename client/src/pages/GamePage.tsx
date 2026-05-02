@@ -12,7 +12,7 @@ export default function GamePage() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { session, userId, username } = useAuthStore();
+  const { userId, username } = useAuthStore();
   const {
     board,
     phase,
@@ -41,12 +41,14 @@ export default function GamePage() {
   const [isJoining, setIsJoining] = useState(true);
 
   useEffect(() => {
+    // Read session fresh — we don't want a token refresh to re-trigger the join.
+    const session = useAuthStore.getState().session;
     if (!code || !session) return;
 
-    setIsJoining(true);
     let cancelled = false;
 
     (async () => {
+      setIsJoining(true);
       try {
         // A 5-char short code (Create Room / Join by Code / Rematch) needs
         // resolution via the join_by_code RPC.  A full Nakama matchId (Quick
@@ -76,7 +78,7 @@ export default function GamePage() {
       }
       resetGame();
     };
-  }, [code, location.key]);
+  }, [code, location.key, setMatchId, resetGame]);
 
   // When the server confirms a rematch, navigate to the same game URL.
   // Changing location.key re-triggers the [code, location.key] effect above,
@@ -155,12 +157,12 @@ export default function GamePage() {
         {/* Player bar */}
         <div className="flex items-center justify-between w-full gap-3">
           {/* My side */}
-          <div className={`flex-1 flex flex-col items-start gap-1.5 ${me ? '' : 'opacity-30'}`}>
-            <div className="flex items-center gap-2">
+          <div className={`flex-1 min-w-0 flex flex-col items-start gap-1.5 ${me ? '' : 'opacity-30'}`}>
+            <div className="flex items-center gap-2 w-full min-w-0">
               {isMyTurn && phase === 'playing' && (
                 <span className="w-2 h-2 rounded-full bg-oxo-x dot-pulse flex-shrink-0" />
               )}
-              <span className="text-sm font-semibold text-oxo-text truncate max-w-[90px]">
+              <span className="text-sm font-semibold text-oxo-text truncate">
                 {username}
               </span>
             </div>
@@ -179,9 +181,9 @@ export default function GamePage() {
           </div>
 
           {/* Opponent side */}
-          <div className={`flex-1 flex flex-col items-end gap-1.5 ${opponent ? '' : 'opacity-30'}`}>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-oxo-text truncate max-w-[90px]">
+          <div className={`flex-1 min-w-0 flex flex-col items-end gap-1.5 ${opponent ? '' : 'opacity-30'}`}>
+            <div className="flex items-center gap-2 w-full min-w-0 justify-end">
+              <span className="text-sm font-semibold text-oxo-text truncate">
                 {opponent ? opponent.username : 'Waiting...'}
               </span>
               {!isMyTurn && phase === 'playing' && opponent && (

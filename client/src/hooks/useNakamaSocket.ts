@@ -23,16 +23,7 @@ export async function waitForSocket(): Promise<Socket> {
 }
 
 export function useNakamaSocket() {
-  const session    = useAuthStore((s) => s.session);
-  const applyStateUpdate              = useGameStore((s) => s.applyStateUpdate);
-  const addOrUpdatePlayer             = useGameStore((s) => s.addOrUpdatePlayer);
-  const setPlayerOffline              = useGameStore((s) => s.setPlayerOffline);
-  const setError                      = useGameStore((s) => s.setError);
-  const resetGame                     = useGameStore((s) => s.resetGame);
-  const setRematchRequestedByOpponent = useGameStore((s) => s.setRematchRequestedByOpponent);
-  const setRematchRequestedByMe       = useGameStore((s) => s.setRematchRequestedByMe);
-  const setRematchDeclined            = useGameStore((s) => s.setRematchDeclined);
-  const setPendingRematchCode         = useGameStore((s) => s.setPendingRematchCode);
+  const session = useAuthStore((s) => s.session);
 
   useEffect(() => {
     // Guard: socketInstance is set synchronously on first run, so subsequent
@@ -49,11 +40,14 @@ export function useNakamaSocket() {
     socket.onmatchdata = (data) => {
       const raw = new TextDecoder().decode(data.data);
       const opCode = data.op_code;
-      // Read userId fresh on every message instead of capturing a closure value.
-      // The server broadcasts REMATCH_REQUEST back to all players (including the
-      // sender), so a stale or empty closure userId would cause the sender to
-      // incorrectly trigger setRematchRequestedByOpponent(true) for themselves.
+      // Resolve all store state fresh on each message — the socket is set up once
+      // but messages arrive throughout the app lifetime, so closures would go stale.
       const currentUserId = useAuthStore.getState().userId;
+      const {
+        applyStateUpdate, addOrUpdatePlayer, setPlayerOffline, setError,
+        resetGame, setRematchRequestedByOpponent, setRematchRequestedByMe,
+        setRematchDeclined, setPendingRematchCode,
+      } = useGameStore.getState();
 
       switch (opCode) {
         case OpCode.STATE_UPDATE:
@@ -129,5 +123,5 @@ export function useNakamaSocket() {
       });
 
     // No cleanup on unmount — socket is app-level, persists across pages.
-  }, [session?.token]);
+  }, [session]);
 }
