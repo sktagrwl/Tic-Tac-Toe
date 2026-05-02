@@ -1,5 +1,8 @@
 {
   "buildCommand": "cd client && pnpm run build",
   "outputDirectory": "client/dist",
-  "installCommand": "cd client && pnpm install --ignore-workspace --no-frozen-lockfile"
+  "installCommand": "cd client && pnpm install --ignore-workspace --no-frozen-lockfile",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
